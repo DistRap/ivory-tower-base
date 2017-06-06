@@ -1,0 +1,25 @@
+#!/bin/bash
+# ivory git grep
+# git grep in multiple subfolders
+RED='\033[0;31m'
+NC='\033[0m'
+
+FOLDERS="ivory tower ivory-tower-stm32 ivory-tower-stm32-f0 smaccmpilot-stm32f4 can4disco odrive"
+for f in $FOLDERS; do
+  cd $f
+
+  IFS=""
+  fst=1
+  git --no-pager grep --context 2 --heading --color $* | while read line; do
+    case "$line" in
+      *.js) break;;
+      *.html) break;;
+      *.hs)
+          echo -e "$RED $f/$line $NC"
+          continue;;
+    esac
+    echo "$line"
+  done
+
+  cd ..
+done
