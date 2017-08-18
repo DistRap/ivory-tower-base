@@ -4,8 +4,9 @@
 RED='\033[0;31m'
 NC='\033[0m'
 
-FOLDERS="ivory tower ivory-tower-stm32 ivory-tower-stm32-f0 smaccmpilot-stm32f4 can4disco odrive"
+FOLDERS="ivory tower ivory-tower-stm32 ivory-tower-stm32-f0 ivory-tower-posix smaccmpilot-stm32f4 can4disco odrive ivory-tower-base"
 for f in $FOLDERS; do
+  test -d $f || continue
   cd $f
 
   IFS=""
