@@ -114,7 +114,7 @@ uartUnbuffer (BackpressureTransmit req res) = do
 --
 -- Needs (Proxy :: Proxy SomeUARTBuffer) as last parameter.
 --
--- Use with UARTBuffer from Ivory.Base.UART.Types
+-- Use with UARTBuffer from Ivory.Tower.Base.UART.Types
 -- or provide your own buffer
 bufferedUartTower :: forall tx e
                   .  (IvoryString tx)
