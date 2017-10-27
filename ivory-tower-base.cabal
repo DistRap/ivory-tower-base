@@ -19,6 +19,7 @@ library
                        Ivory.Tower.Base.LED
                        Ivory.Tower.Base.UART
                        Ivory.Tower.Base.UART.Types
+                       Ivory.Tower.Base.Util
 
   build-depends:       base >= 4.6,
                        bytestring,
