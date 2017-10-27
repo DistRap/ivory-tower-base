@@ -134,3 +134,165 @@ bufferedUartTower tocc uartPeriph pins baud _ = do
     buffered_ostream :: BackpressureTransmit tx ('Stored IBool))
 
   return (ostream, istream)
+
+-- bridge two UARTs
+uartBridge :: ChanInput ('Stored Uint8)
+           -> ChanOutput ('Stored Uint8)
+           -> ChanInput ('Stored Uint8)
+           -> ChanOutput ('Stored Uint8)
+           -> Tower e ()
+uartBridge ostream istream ostream' istream' = do
+  monitor "uartBridge" $ do
+    handler istream "uartBridgeIstream" $ do
+      out <- emitter ostream' 1
+      callback $ emit out
+
+    handler istream' "uartBridgeIstream2" $ do
+      out <- emitter ostream 1
+      callback $ emit out
+
+-- buffer until one of tokens is received
+bufferBy :: forall buf e . (IvoryString buf)
+           => ChanOutput ('Stored Uint8)
+           -> String
+           -> Proxy buf
+           -> Tower e (ChanOutput buf)
+bufferBy istream tokens _ = do
+  c <- channel
+  monitor "bufferBy" $ do
+
+    (buf :: Ref 'Global buf) <- state "bufferBy_buf"
+
+    handler istream "bufferBy_in" $ do
+      out <- emitter (fst c) 1
+      callbackV $ \v -> do
+        handled <- local $ ival false
+        flip mapM_ tokens $ \t -> do
+          h <- deref handled
+          when (v `isChar` t .&& iNot h) $ do
+                clen <- buf ~>* stringLengthL
+                when (clen /=? 0) $ emit out (constRef buf)
+                store (buf ~> stringLengthL) 0
+                store handled true
+
+        h <- deref handled
+        unless h $ do
+          pos <- deref (buf ~> stringLengthL)
+          store ((buf ~> stringDataL) ! toIx pos) v
+          buf ~> stringLengthL += 1
+
+  return (snd c)
+
+lfBuffer, crBuffer, crlfBuffer, lineBuffer
+           :: forall buf e . (IvoryString buf)
+           => ChanOutput ('Stored Uint8)
+           -> Proxy buf
+           -> Tower e (ChanOutput buf)
+lfBuffer istream buf = bufferBy istream "\n" buf
+crBuffer istream buf = bufferBy istream "\r" buf
+crlfBuffer istream buf = bufferBy istream "\r\n" buf
+lineBuffer = crlfBuffer
+
+-- return true if input matches prefix
+--
+-- define isPrefixOf shortcut as:
+--   let isPrefixOf p x = isPrefixOfBuf p x (Proxy :: Proxy SomeBufferType)
+--
+-- then use as:
+--   gotOk <- "ok" `isPrefixOf` res
+--   assert $ gotOk
+isPrefixOfBuf :: forall buf eff cs s str . (GetBreaks (AllowBreak eff) ~ 'Break,
+                  GetAlloc eff ~ 'Scope cs,
+                  IvoryString buf,
+                  IvoryString str)
+              => String
+              -> Ref s str
+              -> Proxy buf
+              -> Ivory eff IBool
+isPrefixOfBuf p x _ = do
+  (pbuf :: Ref ('Stack s1) buf) <- local $ stringInit p
+  tmp <- isPrefixOf' (constRef pbuf) (constRef x)
+  return tmp
+
+isPrefixOf' :: (GetBreaks (AllowBreak eff) ~ 'Break,
+                GetAlloc eff ~ 'Scope cs,
+                IvoryString str1, IvoryString str2)
+            => ConstRef s1 str1
+            -> ConstRef s2 str2
+            -> Ivory eff IBool
+isPrefixOf' p x = do
+  isPref <- local (ival false)
+
+  plen <- p ~>* stringLengthL
+  xlen <- x ~>* stringLengthL
+
+  when (plen <=? xlen) $ -- if target is smaller than prefix just skip comparing
+    arrayMap $ \i -> do
+      pc <- deref (p ~> stringDataL ! i)
+      xc <- deref (x ~> stringDataL ! (toIx . fromIx) i)
+      cond_
+        [ fromIx i <=? plen - 1 ==> do -- while iterator is smaller than prefix length
+
+            when (pc /=? xc) $ do -- if prefix char differs from targets
+              breakOut
+
+        , true ==> do -- end of prefix reached
+
+            store isPref true
+            breakOut
+        ]
+
+  r <- deref isPref
+  return r
+
+-- append string after a character is found,
+-- prepends it to stream on next write
+--
+-- useful for prefixing UART stream with
+-- e.g. "> " to indicate it comes from device
+dbgPrepend :: Char
+           -> String
+           -> ChanInput ('Stored Uint8)
+           -> Tower e (ChanInput ('Stored Uint8))
+dbgPrepend afterChar appendWhat outchan = do
+  c <- channel
+  monitor "appendAfter" $ do
+    shouldAppend <- stateInit "shouldAppend" (ival true)
+    handler (snd c) "appender" $ do
+     o <- emitter outchan 32
+     callbackV $ \v -> do
+       go <- deref shouldAppend
+       when go $ do
+         puts o appendWhat
+         store shouldAppend false
+       emitV o v
+       when (v `isChar` afterChar) $ do
+         store shouldAppend true
+  return (fst c)
+
+-- filter character from upstream channel
+filterChar :: Char
+           -> ChanOutput ('Stored Uint8)
+           -> Tower e (ChanOutput ('Stored Uint8))
+filterChar c upstream = do
+  chan <- channel
+  monitor "filterChar" $ do
+    handler upstream "filterCharIn" $ do
+      o <- emitter (fst chan) 1
+      callbackV $ \v -> do
+        unless (v `isChar` c) $ emitV o v
+  return $ snd chan
+
+-- replace characters in stream
+replaceChar :: Char
+            -> Char
+            -> ChanOutput ('Stored Uint8)
+            -> Tower e (ChanOutput ('Stored Uint8))
+replaceChar c by upstream = do
+  chan <- channel
+  monitor "replaceChar" $ do
+    handler upstream "replaceCharIn" $ do
+      o <- emitter (fst chan) 1
+      callbackV $ \v -> do
+        ifte_ (v `isChar` c) (emitV o (fromIntegral $ ord by)) (emitV o v)
+  return $ snd chan
