@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Ivory.Tower.Base.UART where
 
@@ -62,6 +63,40 @@ putHexArray :: (GetAlloc (AllowBreak eff) ~ 'Scope cs,
 putHexArray e a = arrayMap $ \i -> do
   x <- deref (a ! i)
   putHex e x
+
+-- convert Uint32 to IvoryString
+uint32ToString :: (GetBreaks (AllowBreak eff) ~ 'Break,
+                   GetAlloc eff ~ 'Scope s1,
+                   IvoryString ('Struct t),
+                   IvoryStruct t)
+               => Uint32
+               -> Ivory eff (Ref ('Stack s1) ('Struct t))
+uint32ToString num = do
+  numTmp <- local $ ival 0
+  store numTmp $ num
+
+  str <- local $ stringInit ""
+
+  n <- deref numTmp
+  size <- assign $ (castDefault :: IFloat -> Uint8) $
+    ceilF $  ceilF $ log (0.1 + (safeCast :: Uint32 -> IFloat) n) / log 10
+
+
+  ix <- local $ ival (0 :: Uint8)
+  forever $ do
+    x <- deref numTmp
+    cix <- deref ix
+    store (str ~> stringDataL ! (toIx $ (safeCast :: Uint8 -> Sint32) (size - 1 - cix) ))
+          (bitCast $ (x .% 10) + (fromIntegral $ ord '0'))
+    store numTmp $ x `iDiv` 10
+
+    ix += 1
+
+    when (x <=? 1) $ do
+      store (str ~> stringLengthL) (safeCast size)
+      breakOut
+
+  return str
 
 --
 -- UART buffer transmits in buffers. This wrapper
