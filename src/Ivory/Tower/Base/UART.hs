@@ -80,7 +80,7 @@ uint32ToString num = do
 
   n <- deref numTmp
   size <- assign $ (castDefault :: IFloat -> Uint8) $
-    ceilF $  ceilF $ log (0.1 + (safeCast :: Uint32 -> IFloat) n) / log 10
+    ceilF $ log (0.1 + (safeCast :: Uint32 -> IFloat) n) / log 10
 
 
   ix <- local $ ival (0 :: Uint8)
