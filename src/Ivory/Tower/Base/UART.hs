@@ -99,6 +99,87 @@ uint32ToString num = do
 
   return str
 
+-- experimental
+-- format Sint32 to IvoryString buffer `buf` starting at
+-- `offset` position, padded to `targetChars` with `padChar`
+sint32ToStringBuffer :: (GetBreaks (AllowBreak eff) ~ 'Break,
+                         GetAlloc eff ~ 'Scope s1,
+                         IvoryString str)
+               => Ref ('Stack s1) str
+               -> Sint32
+               -> Sint32
+               -> Char
+               -> Sint32
+               -> Ivory eff ()
+sint32ToStringBuffer buf offset targetChars padChar num = do
+  numTmp <- local $ ival 0
+  store numTmp $ abs num
+
+  n <- deref numTmp
+  size <- assign $ (castDefault :: IDouble -> Sint32) $
+    ceilF $ logBase 10 (0.1 + (safeCast :: Sint32 -> IDouble) n)
+
+  negative <- assign $ num <? 0
+  signPad <- assign $ negative ? (1, 0)
+
+  (pad :: Ix 1024) <- assign $
+    toIx $ (size + signPad <? targetChars) ? (targetChars - (size + signPad), 0)
+
+  unless (pad ==? 0) $
+    for pad $ \i -> store
+      (buf ~> stringDataL ! toIx (offset + fromIx i))
+      (fromIntegral $ ord padChar)
+
+  when negative $ store (buf ~> stringDataL ! (toIx $ offset + (fromIx pad) - 1)) (fromIntegral $ ord '-')
+
+  ix <- local $ ival (0 :: Sint32)
+  forever $ do
+    x <- deref numTmp
+    cix <- deref ix
+    store (buf ~> stringDataL ! toIx ((size + offset + fromIx pad + signPad) - 1 - cix))
+          (bitCast $ (signCast :: Sint32 -> Uint32) $ (x .% 10) + (fromIntegral $ ord '0'))
+    store numTmp $ x `iDiv` 10
+
+    ix += 1
+
+    cx <- deref numTmp
+    when (cx <=? 0) $ do
+      store (buf ~> stringLengthL) (safeCast $ size + offset + fromIx pad + signPad)
+      breakOut
+
+  return ()
+
+-- experimental
+-- convert IFloat or IDouble to IvoryString with specified
+-- `prec` decimal points
+floatingToString :: (GetBreaks (AllowBreak eff) ~ 'Break,
+                     GetAlloc eff ~ 'Scope s1,
+                     IvoryString ('Struct t),
+                     IvoryStruct t,
+                     Num from, Floating from,
+                     RuntimeCast from Sint32,
+                     SafeCast Sint32 from)
+               => from
+               -> Sint32
+               -> Ivory eff (Ref ('Stack s1) ('Struct t))
+floatingToString num prec = do
+  (ipart :: Sint32) <- assign $ castDefault num
+  (fpart :: from) <- assign $ abs $ num - safeCast ipart
+
+  buf <- local $ stringInit ""
+  sint32ToStringBuffer buf 0 4 ' ' ipart
+
+  when (prec /=? 0) $ do
+    iLen <- buf ~>* stringLengthL
+    sint32ToStringBuffer buf (iLen + 1) prec '0' $ castDefault (fpart * (10 ** safeCast prec))
+    -- add dot
+    store ((buf ~> stringDataL) ! (toIx $ iLen)) (fromIntegral $ ord '.')
+
+  -- XXX: handle 10.0, fpart being 0
+  -- test 10.005
+
+  return buf
+
 --
 -- UART buffer transmits in buffers. This wrapper
 -- tower create a channel that allows byte-by-byte transmission
