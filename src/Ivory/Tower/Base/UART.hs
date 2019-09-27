@@ -7,6 +7,7 @@
 
 module Ivory.Tower.Base.UART where
 
+import Control.Monad (forM_)
 import Data.Char (ord)
 import GHC.TypeLits
 
@@ -202,7 +203,7 @@ bufferBy istream tokens _ = do
       out <- emitter (fst c) 1
       callbackV $ \v -> do
         handled <- local $ ival false
-        flip mapM_ tokens $ \t -> do
+        forM_ tokens $ \t -> do
           h <- deref handled
           when (v `isChar` t .&& iNot h) $ do
                 clen <- buf ~>* stringLengthL
