@@ -18,7 +18,7 @@ import Ivory.Tower.HAL.Bus.Interface
 
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Driver.UART
-import Ivory.BSP.STM32.Peripheral.UART.Peripheral
+import Ivory.BSP.STM32.Peripheral.UART -- .Peripheral
 
 isChar :: Uint8 -> Char -> IBool
 isChar b c = b ==? (fromIntegral $ ord c)
