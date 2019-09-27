@@ -12,6 +12,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Ivory.Base
+                       Ivory.Base.Math
                        Ivory.Tower.Base
                        Ivory.Tower.Base.Debug
                        Ivory.Tower.Base.GPIO
