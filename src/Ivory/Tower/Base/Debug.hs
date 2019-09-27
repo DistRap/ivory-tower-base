@@ -3,7 +3,7 @@ module Ivory.Tower.Base.Debug where
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
-import Ivory.BSP.STM32.Peripheral.GPIOF4
+import Ivory.BSP.STM32.Peripheral.GPIO
 import Ivory.Tower.Base.LED
 import Ivory.Tower.Base.GPIO
 

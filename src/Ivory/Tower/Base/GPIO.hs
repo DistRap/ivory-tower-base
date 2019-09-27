@@ -2,7 +2,7 @@
 module Ivory.Tower.Base.GPIO where
 
 import Ivory.Language
-import Ivory.BSP.STM32.Peripheral.GPIOF4
+import Ivory.BSP.STM32.Peripheral.GPIO
 
 -- configure GPIOPin as output
 pinOut :: GPIOPin -> Ivory eff()
