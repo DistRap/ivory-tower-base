@@ -116,27 +116,26 @@ sint32ToStringBuffer buf offset targetChars padChar num = do
   store numTmp $ abs num
 
   n <- deref numTmp
-  size <- assign $ (castDefault :: IDouble -> Sint32) $
-    ceilF $ logBase 10 (0.1 + (safeCast :: Sint32 -> IDouble) n)
 
   negative <- assign $ num <? 0
   signPad <- assign $ negative ? (1, 0)
 
+  size <- assign $ signPad + ((castDefault :: IDouble -> Sint32) $
+    ceilF $ logBase 10 (0.1 + (safeCast :: Sint32 -> IDouble) n))
+
   (pad :: Ix 1024) <- assign $
-    toIx $ (size + signPad <? targetChars) ? (targetChars - (size + signPad), 0)
+    toIx $ (size <? targetChars) ? (targetChars - size, 0)
 
   unless (pad ==? 0) $
-    for pad $ \i -> store
+    0 `upTo` (pad - 1) $ \i -> store
       (buf ~> stringDataL ! toIx (offset + fromIx i))
       (fromIntegral $ ord padChar)
-
-  when negative $ store (buf ~> stringDataL ! (toIx $ offset + (fromIx pad) - 1)) (fromIntegral $ ord '-')
 
   ix <- local $ ival (0 :: Sint32)
   forever $ do
     x <- deref numTmp
     cix <- deref ix
-    store (buf ~> stringDataL ! toIx ((size + offset + fromIx pad + signPad) - 1 - cix))
+    store (buf ~> stringDataL ! toIx ((size + offset + fromIx pad) - 1 - cix))
           (bitCast $ (signCast :: Sint32 -> Uint32) $ (x .% 10) + (fromIntegral $ ord '0'))
     store numTmp $ x `iDiv` 10
 
@@ -144,7 +143,10 @@ sint32ToStringBuffer buf offset targetChars padChar num = do
 
     cx <- deref numTmp
     when (cx <=? 0) $ do
-      store (buf ~> stringLengthL) (safeCast $ size + offset + fromIx pad + signPad)
+      store (buf ~> stringLengthL) (safeCast $ size + offset + fromIx pad)
+      cix' <- deref ix
+      when negative $ store (buf ~> stringDataL ! (toIx $ size + offset + (fromIx pad) - 1 - cix')) (fromIntegral $ ord '-')
+
       breakOut
 
   return ()
