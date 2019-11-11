@@ -14,7 +14,7 @@ import Ivory.Tower
 filterChan :: (IvoryInit a, IvoryStore a, IvoryZeroVal a)
            => (a -> IBool)
            -> ChanOutput ('Stored a)
-           -> Tower e ()
+           -> Tower e (ChanOutput ('Stored a))
 filterChan predic upstream = do
   chan <- channel
   monitor "filterChan" $ do
@@ -22,6 +22,8 @@ filterChan predic upstream = do
       o <- emitter (fst chan) 1
       callbackV $ \v ->
         unless (predic v) $ emitV o v
+
+  return (snd chan)
 
 -- drop every nth element matching predicate
 dropEvery :: (IvoryInit a, IvoryStore a, IvoryZeroVal a)
@@ -64,5 +66,52 @@ mergeInputs a b = do
 
   return (fst common)
 
--- XXX: TODO: splitter  / 
--- (pass, fail) <- splitOn pred chan
+
+-- Create a channel pair which can be used
+-- as a side channel for ChanInput.
+--
+-- Instead of original input channel use
+-- input channel created by this tower.
+--
+-- Example:
+-- >  togIn' <- ledToggle ledpin
+-- >  (togIn, togOut) <- inputSniffer togIn'
+--
+-- This allows us to hook onto output channel side
+-- which would be normally hidden in ledToggle
+inputSniffer :: (IvoryZero a, IvoryArea a)
+             => ChanInput a
+             -> Tower e (ChanInput a, ChanOutput a)
+inputSniffer a = do
+  new <- channel
+  monitor "fwd" $ do
+    handler (snd new) "forwardToOrig" $ do
+      oem <- emitter a 1
+      callback $ emit oem
+
+  return new
+
+-- Split elements into two channels, first containing
+-- elements passing predicate, second failing.
+--
+-- Example:
+-- (passing, failing) <- splitter (>=? 10) someChannel
+--
+splitter :: (IvoryInit a, IvoryStore a, IvoryZeroVal a)
+         => (a -> IBool)
+         -> ChanOutput ('Stored a)
+         -> Tower e (ChanOutput ('Stored a), ChanOutput ('Stored a))
+splitter predic upstream = do
+  passing <- filterChan predic upstream
+  failing <- filterChan (iNot . predic) upstream
+  return (passing, failing)
+
+fwd :: (IvoryArea a, IvoryZero a)
+    => ChanOutput a
+    -> ChanInput a
+    -> Tower e ()
+fwd from to = do
+  monitor "forward" $ do
+    handler from "forwardFrom" $ do
+      e <- emitter to 1
+      callback $ emit e
