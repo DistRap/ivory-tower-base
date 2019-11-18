@@ -65,6 +65,18 @@ putHexArray e a = arrayMap $ \i -> do
   x <- deref (a ! i)
   putHex e x
 
+-- marshall ivory string struct to emitter
+putIvoryString :: forall str eff s s2
+                . (IvoryString str, GetAlloc (AllowBreak eff) ~ 'Scope s)
+                => Emitter ('Stored Uint8)
+                -> Ref s2 str
+                -> Ivory eff ()
+putIvoryString e s = do
+              l <- deref (s ~> stringLengthL)
+              upTo 0 (toIx (l - 1)) $ \i -> do
+                x <- deref ((s ~> stringDataL) ! i)
+                emitV e x
+
 -- convert Uint32 to IvoryString
 uint32ToString :: (GetBreaks (AllowBreak eff) ~ 'Break,
                    GetAlloc eff ~ 'Scope s1,
