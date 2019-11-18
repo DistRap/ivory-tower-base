@@ -49,6 +49,28 @@ ledController leds rxer = do
       (mapM_ ledOn  leds)
       (mapM_ ledOff leds)
 
+-- | Toggle LEDs on any incoming message
+ledToggle :: (IvoryArea a, IvoryZero a)
+          => [LED]
+          -> Tower e (ChanInput a)
+ledToggle leds = do
+  (togIn, togOut) <- channel
+  (ledIn, ledOut) <- channel
+
+  monitor "toggle" $ do
+    ledController leds ledOut
+
+    current <- state "toggle_current"
+
+    handler togOut "rx" $ do
+      e <- emitter ledIn 1
+      callback $ const $ do
+        emit e (constRef current)
+        c <- deref current
+        store current (iNot c)
+
+  return togIn
+
 -- | Blink task: Given a period and a channel source, output an alternating
 --   stream of true / false on each period.
 blinker :: Time a => a -> Tower e (ChanOutput ('Stored IBool))
