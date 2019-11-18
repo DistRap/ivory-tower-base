@@ -115,3 +115,32 @@ fwd from to = do
     handler from "forwardFrom" $ do
       e <- emitter to 1
       callback $ emit e
+
+--instance Functor (ChanOutput) where ???
+-- Creates new channel that apples function `f` ChanOutput `chan` messages
+fmapChan :: (IvoryStore a
+            , IvoryInit b
+            , IvoryZeroVal a
+            , IvoryZeroVal b)
+         => (a -> b)
+         -> ChanOutput ('Stored a)
+         -> Tower e (ChanOutput ('Stored b))
+fmapChan f chan = do
+    nchan <- channel
+    monitor "fmapChan" $ do
+      handler chan "fmapChan" $ do
+        o <- emitter (fst nchan) 1
+        callbackV $ emitV o . f
+
+    return (snd nchan)
+
+-- sample ChanOutput `chan` into state with `name`
+sampler :: (IvoryZero a, IvoryArea a)
+       => String
+       -> ChanOutput a
+       -> Tower e ()
+sampler name chan = do
+  monitor "variableSampler" $ do
+    s <- state name
+    handler chan "samplerHandler" $ do
+      callback $ refCopy s
