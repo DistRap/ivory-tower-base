@@ -5,3 +5,4 @@ import Ivory.Tower.Base.GPIO as X
 import Ivory.Tower.Base.LED as X
 import Ivory.Tower.Base.CAN as X
 import Ivory.Tower.Base.UART as X
+import Ivory.Tower.Base.Util as X
