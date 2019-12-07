@@ -1,11 +1,11 @@
 name:                ivory-tower-base
 version:             0.1.0.0
 synopsis:            Ivory Tower utilites
--- description:
+description:         Collection of various utilities and high order combinators for Ivory/Tower
 license:             BSD3
 author:              base48.cz
 maintainer:          srk@48.io
--- category:
+category:            Embedded
 build-type:          Simple
 cabal-version:       >=1.10
 
