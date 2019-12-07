@@ -195,6 +195,7 @@ floatingToString num prec = do
   (fpart :: from) <- assign $ abs $ num - safeCast ipart
 
   buf <- local $ stringInit ""
+  -- XXX: hardcoded padding (4)
   sint32ToStringBuffer buf 0 4 ' ' ipart
 
   when (prec /=? 0) $ do

@@ -106,6 +106,7 @@ splitter predic upstream = do
   failing <- filterChan (iNot . predic) upstream
   return (passing, failing)
 
+-- forward ChanOutput `from` to ChanInput `to`
 fwd :: (IvoryArea a, IvoryZero a)
     => ChanOutput a
     -> ChanInput a
@@ -117,7 +118,7 @@ fwd from to = do
       callback $ emit e
 
 --instance Functor (ChanOutput) where ???
--- Creates new channel that apples function `f` ChanOutput `chan` messages
+-- Creates new channel that apples function `f` to ChanOutput `chan` messages
 fmapChan :: (IvoryStore a
             , IvoryInit b
             , IvoryZeroVal a
