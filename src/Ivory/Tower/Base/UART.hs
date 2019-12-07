@@ -69,7 +69,7 @@ putHexArray e a = arrayMap $ \i -> do
 putIvoryString :: forall str eff s s2
                 . (IvoryString str, GetAlloc (AllowBreak eff) ~ 'Scope s)
                 => Emitter ('Stored Uint8)
-                -> Ref s2 str
+                -> ConstRef s2 str
                 -> Ivory eff ()
 putIvoryString e s = do
               l <- deref (s ~> stringLengthL)
