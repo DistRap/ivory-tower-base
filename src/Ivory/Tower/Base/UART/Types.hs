@@ -12,7 +12,7 @@ import Ivory.Tower
 -- sample UARTBuffer
 -- you might want to define your own
 -- UARTBuffer with custom size
-[ivory| string struct UARTBuffer 1024 |]
+[ivory| string struct UARTBuffer 256 |]
 
 uartTypes :: Module
 uartTypes = package "uartTypes" $ do
