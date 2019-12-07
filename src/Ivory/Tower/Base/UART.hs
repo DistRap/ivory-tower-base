@@ -391,6 +391,22 @@ isPrefixOf' p x = do
   r <- deref isPref
   return r
 
+-- append char when 'afterChar' character is found
+appendCharAfter :: Char
+                -> Char
+                -> ChanOutput ('Stored Uint8)
+                -> Tower e (ChanOutput ('Stored Uint8))
+appendCharAfter afterChar appendChar outchan = do
+  c <- channel
+  monitor "appendAfter" $ do
+    handler outchan "appender" $ do
+     o <- emitter (fst c) 2
+     callbackV $ \v -> do
+       emitV o v
+       when (v `isChar` afterChar) $ do
+         putc o $ fromIntegral $ ord appendChar
+  return (snd c)
+
 -- append string after a character is found,
 -- prepends it to stream on next write
 --
