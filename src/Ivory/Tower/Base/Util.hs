@@ -127,13 +127,30 @@ fmapChan :: (IvoryStore a
          -> ChanOutput ('Stored a)
          -> Tower e (ChanOutput ('Stored b))
 fmapChan f chan = do
-    nchan <- channel
-    monitor "fmapChan" $ do
-      handler chan "fmapChan" $ do
-        o <- emitter (fst nchan) 1
-        callbackV $ emitV o . f
+  nchan <- channel
+  monitor "fmapChan" $ do
+    handler chan "fmapChan" $ do
+      o <- emitter (fst nchan) 1
+      callbackV $ emitV o . f
 
-    return (snd nchan)
+  return (snd nchan)
+
+-- similar as `fmapChan` for ChanInputs
+fmapInputChan :: (IvoryStore a
+                 , IvoryInit b
+                 , IvoryZeroVal a
+                 , IvoryZeroVal b)
+              => (a -> b)
+              -> ChanInput ('Stored b)
+              -> Tower e (ChanInput ('Stored a))
+fmapInputChan f ichan = do
+  nchan <- channel
+  monitor "fmapInputChan" $ do
+    handler (snd nchan) "fmapInputChan" $ do
+      o <- emitter ichan 1
+      callbackV $ emitV o . f
+
+  return (fst nchan)
 
 -- sample ChanOutput `chan` into state with `name`
 sampler :: (IvoryZero a, IvoryArea a)
