@@ -458,3 +458,58 @@ replaceChar c by upstream = do
       callbackV $ \v -> do
         ifte_ (v `isChar` c) (emitV o (fromIntegral $ ord by)) (emitV o v)
   return $ snd chan
+
+echoPrompt :: String
+           -> ChanInput  ('Stored Uint8)
+           -> ChanOutput ('Stored Uint8)
+           -> ChanInput  ('Stored IBool)
+           -> Tower p ()
+echoPrompt greeting ostream istream ledctl = do
+  monitor "echoprompt" $ do
+    handler systemInit "init" $ do
+      o <- emitter ostream 32
+      callback $ const $ do
+        puts o (greeting ++ "\n")
+        puts o prompt
+
+    handler istream "istream" $ do
+      l <- emitter ledctl 1
+      o <- emitter ostream 32
+      callbackV $ \input -> do
+        putc o input -- echo to terminal
+        let testChar = (input `isChar`)
+        cond_
+          [ testChar '1'  ==> puts o "\r\noutput on\r\n"  >> emitV l true
+          , testChar '2'  ==> puts o "\r\noutput off\r\n" >> emitV l false
+          , testChar '0'  ==> puts o "\r\noutput off\r\n" >> emitV l false
+          , testChar '\r' .|| testChar '\n' ==> puts o prompt
+          ]
+  where prompt = "tower> "
+
+intensityPrompt :: String
+           -> ChanInput  ('Stored Uint8)
+           -> ChanOutput ('Stored Uint8)
+           -> ChanInput  ('Stored Uint8)
+           -> Tower p ()
+intensityPrompt greeting ostream istream ledctl = do
+  monitor "echoprompt" $ do
+    handler systemInit "init" $ do
+      o <- emitter ostream 32
+      callback $ const $ do
+        puts o (greeting ++ "\r\n")
+        puts o prompt
+
+    handler istream "istream" $ do
+      l <- emitter ledctl 1
+      o <- emitter ostream 32
+      callbackV $ \input -> do
+        putc o input -- echo to terminal
+        let testChar = (input `isChar`)
+        cond_ $ [
+            testChar c ==> puts o " ok\r\n" >> emitV l (fromIntegral (i :: Int))
+            | (c,i) <- zip ['0', '1' .. '9'] [0, 1 .. 9]
+          ] ++ [
+            testChar '\r' .|| testChar '\n' ==> puts o prompt
+          ]
+
+  where prompt = "tower> "
