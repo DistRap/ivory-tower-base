@@ -162,3 +162,28 @@ sampler name chan = do
     s <- state name
     handler chan "samplerHandler" $ do
       callback $ refCopy s
+
+-- forward n elements, drop all afterwards
+takeChan :: (IvoryZero a, IvoryArea a)
+         => Integer
+         -> ChanOutput a
+         -> Tower e (ChanOutput a)
+takeChan n c = do
+  nchan <- channel
+  monitor "take" $ do
+    count <- stateInit "takeCount" (ival (0 :: Uint32))
+    handler c "takeChan" $ do
+      o <- emitter (fst nchan) 1
+      callback $ \x -> do
+        current <- deref count
+        when (current <? fromIntegral n) $ do
+          emit o x
+          count += 1
+
+  return (snd nchan)
+
+-- forward 1 element, drop all afterwards
+once :: (IvoryZero a, IvoryArea a)
+     => ChanOutput a
+     -> Tower e (ChanOutput a)
+once = takeChan 1
