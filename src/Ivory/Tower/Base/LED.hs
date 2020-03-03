@@ -17,6 +17,7 @@ data LED = LED GPIOPin LEDPolarity
 ledSetup :: LED -> Ivory eff ()
 ledSetup led@(LED pin _polarity) = do
   pinEnable pin
+  pinSetMode pin gpio_mode_output
   pinSetOutputType pin gpio_outputtype_pushpull
   pinSetSpeed pin gpio_speed_2mhz
   pinSetPUPD pin gpio_pupd_none
