@@ -118,7 +118,8 @@ fwd from to = do
       callback $ emit e
 
 --instance Functor (ChanOutput) where ???
--- Creates new channel that apples function `f` to ChanOutput `chan` messages
+-- Creates new channel that apples function `f` to
+-- ChanOutput `chan` message values
 fmapChan :: (IvoryStore a
             , IvoryInit b
             , IvoryZeroVal a
