@@ -66,9 +66,9 @@ ledToggle leds = do
     handler togOut "rx" $ do
       e <- emitter ledIn 1
       callback $ const $ do
-        emit e (constRef current)
         c <- deref current
         store current (iNot c)
+        emit e (constRef current)
 
   return togIn
 
