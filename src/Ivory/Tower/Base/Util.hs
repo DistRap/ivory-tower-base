@@ -188,3 +188,32 @@ once :: (IvoryZero a, IvoryArea a)
      => ChanOutput a
      -> Tower e (ChanOutput a)
 once = takeChan 1
+
+-- | Count from `xinit` initial value, increasing each `per` `Time`,
+-- overflowing when reaching `maxBound`
+-- > cOut <- periodicCounter (Milliseconds 1000) (0 :: Uint8)
+periodicCounter :: (Time t
+           , Num a
+           , IvoryZeroVal a
+           , IvoryInit a
+           , IvoryStore a)
+        => t
+        -> a
+        -> Tower e (ChanOutput ('Stored a))
+periodicCounter per xinit = do
+  c <- channel
+  p <- period per
+  monitor "counter" $ do
+    cnt <- stateInit "cnt" (ival xinit)
+    handler systemInit "counterInit" $ do
+      e <- emitter (fst c) 1
+      callback $ const $ do
+        emit e (constRef cnt)
+
+    handler p "counterPeriod" $ do
+      e <- emitter (fst c) 1
+      callback $ const $ do
+        cnt += 1
+        emit e (constRef cnt)
+
+  return (snd c)
