@@ -177,19 +177,32 @@ sint32ToStringBuffer buf offset targetChars padChar num = do
 
   return ()
 
+
+-- format Sint32 to IvoryString buffer `buf` starting at
+-- `offset` position, padded to `targetChars` with `padChar`
+sint32ToString
+  :: (GetBreaks (AllowBreak eff) ~ 'Break,
+      GetAlloc eff ~ 'Scope s1,
+      IvoryString str)
+  => Sint32
+  -> Ivory eff (Ref ('Stack s1) str)
+sint32ToString num = do
+  buf <- local $ stringInit ""
+  sint32ToStringBuffer buf 0 8 ' ' num
+  return buf
+
 -- experimental
 -- convert IFloat or IDouble to IvoryString with specified
 -- `prec` decimal points
 floatingToString :: (GetBreaks (AllowBreak eff) ~ 'Break,
                      GetAlloc eff ~ 'Scope s1,
-                     IvoryString ('Struct t),
-                     IvoryStruct t,
+                     IvoryString str,
                      Num from, Floating from,
                      RuntimeCast from Sint32,
                      SafeCast Sint32 from)
                => from
                -> Sint32
-               -> Ivory eff (Ref ('Stack s1) ('Struct t))
+               -> Ivory eff (Ref ('Stack s1) str)
 floatingToString num prec = do
   (ipart :: Sint32) <- assign $ castDefault num
   (fpart :: from) <- assign $ abs $ num - safeCast ipart
