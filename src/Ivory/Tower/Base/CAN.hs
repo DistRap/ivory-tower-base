@@ -43,7 +43,7 @@ canSendTower req msg = do
             store tx_pending true
 
 -- from ASCII rep to binary
-toBin :: Def ('[Uint8] ':-> Uint8)
+toBin :: Def ('[Uint8] :-> Uint8)
 toBin = proc "toBin" $ \x -> body $ do
  cond_
    [ x >=? (fromIntegral $ ord '0') .&& x <=? (fromIntegral $ ord '9') ==> do
