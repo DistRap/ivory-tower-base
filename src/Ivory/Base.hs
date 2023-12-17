@@ -14,13 +14,11 @@ ixToU16 :: ANat n => Ix n -> Uint16
 ixToU16 = (bitCast :: Uint32 -> Uint16) . signCast . fromIx
 
 -- copy array data from some offset to new array
-arrayCopyFromOffset :: ( ANat n, ANat m, IvoryRef r
-                       , IvoryExpr (r s2 ('Array m ('Stored t)))
-                       , IvoryExpr (r s2 ('Stored t))
+arrayCopyFromOffset :: ( ANat n, ANat m, KnownConstancy c
                        , IvoryStore t
                        )
                     => Ref s1 ('Array n ('Stored t))
-                    -> r s2 ('Array m ('Stored t))
+                    -> Pointer 'Valid c s2 ('Array m ('Stored t))
                     -> Sint32
                     -> Sint32
                     -> Ivory eff ()

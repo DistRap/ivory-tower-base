@@ -9,7 +9,7 @@ module Ivory.Tower.Base.UART where
 
 import Control.Monad (forM_)
 import Data.Char (ord)
-import GHC.TypeLits
+import GHC.TypeLits (KnownNat)
 
 import Ivory.Language
 import Ivory.Stdlib
@@ -55,12 +55,14 @@ putHex' e val = do
   ifte_ (lo >=? 0x3a) (emitV e $ lo + 7) (emitV e lo)
 
 -- send hex formatted array of Uint8s to emitter
-putHexArray :: (GetAlloc (AllowBreak eff) ~ 'Scope cs,
-                IvoryExpr (ref s ('Stored Uint8)),
-                IvoryExpr (ref s ('Array len ('Stored Uint8))), IvoryRef ref,
-                GHC.TypeLits.KnownNat len) =>
-               Emitter ('Stored Uint8)
-               -> ref s ('Array len ('Stored Uint8)) -> Ivory eff ()
+putHexArray
+  :: ( GetAlloc (AllowBreak eff) ~ 'Scope cs
+     , KnownConstancy c
+     , KnownNat len
+     )
+  => Emitter ('Stored Uint8)
+  -> Pointer 'Valid c s ('Array len ('Stored Uint8))
+  -> Ivory eff ()
 putHexArray e a = arrayMap $ \i -> do
   x <- deref (a ! i)
   putHex e x
